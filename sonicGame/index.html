@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+    <html>
+        <head>
+            <style>
+            canvas {
+                border: 5px solid black;
+                display: inline-block;
+                float: left;
+            }
+            h1{
+                display: inline-block;
+                margin: 0px 0px 0px 30px;
+            }
+            div {
+                display: inline-block;
+                margin: 10px 10px 10px 10px;
+                padding-left: 20px;
+            }
+            span{
+                font-weight: bold;
+            }
+            </style>
+            <script src='rings.js'></script>
+            <script src='bombs.js'></script>
+            <script>
+                function keyUpHandler(e){
+                    switch(e.keyCode){
+                        case 16: shiftKey=false; break;
+                        case 32: spaceKey=false; break;
+                        case 37: leftKey=false; break;
+                        case 38: upKey=false; break;
+                        case 39: rightKey=false; break;
+                        case 40: downKey=false; break;
+                        case 65: aKey=false; break;
+                        case 68: dKey=false; break;
+                        case 87: wKey=false; break;
+                    }
+                        
+                }
+                function keyDownHandler(e){
+                    switch(e.keyCode){
+                        case 16: shiftKey=true; break;
+                        case 32: spaceKey=true; break;
+                        case 37: leftKey=true; break;
+                        case 38: upKey=true; break;
+                        case 39: rightKey=true; break;
+                        case 40: downKey=true; break;
+                        case 65: aKey=true; break;
+                        case 68: dKey=true; break;
+                        case 87: wKey=true; break;
+                    }
+                }
+
+                var linkX;
+                var linkY;
+                var linkHeight;
+                var linkText;
+                var linkWidth;
+                var inLink;
+                var inStartLink;
+                var inContinueLink;
+
+                var sonic = new Image();
+                sonic.src = "sonic.png";
+
+                var background = new Image();
+                background.src = "background.jpg";
+
+                var loadScreen =new Image();
+                loadScreen.src = "loadScreen.png";
+
+                var gameOver = new Image();
+                gameOver.src= "gameOver.png";
+
+                var gameWin = new Image();
+                gameWin.src= "gameWin.png";
+
+                var startImg = new Image();
+                startImg.src="start.png";
+
+                var bombImg = new Image();
+                bombImg.src = "bombs.png";
+                var bombs;
+                var bombsFrameCount;
+
+                var ringImg = new Image();
+                ringImg.src="rings.png";
+                var rings;
+                var ringsFrameCount;
+                
+                var heartImg = new Image();
+                heartImg.src="heart.png";
+
+                var canvas, ctx, timing, timingTwo;
+
+                var sonicX, sonicY;
+                var sonicFrameX, sonicFrameY;
+                var sonicFrameW, sonicFrameH;
+                var sonicFrameCount;
+
+                //sonic bounds
+                var sonicLeft, sonicRight;
+                var sonicTop, sonicBottom;
+                
+                var leftKey, rightKey;
+                var upKey, downKey;
+                var shiftKey, spaceKey;
+                var aKey, dKey, wKey;
+                
+                var sonicJumping, sonicJumpingFrame;
+
+                var isRight, isLeft, isUp;
+
+                var sonicJumping, sonicJumpingFrame;
+
+                var randomCol, randomBomb;
+
+                var bombChance, dropSpeed;
+
+                var stamina, staminaCooldown;
+
+                var score;
+
+                var lives, isStart, isEnd, isWin, isContinue;
+
+                var levelTwo, levelThree;
+                var levelTwoTime, levelThreeTime;
+
+                var newItemTime;
+
+                //sound
+                var ringSound;
+                var ringSoundClone;
+                var lifeLost;
+                var bombExplosion;
+                var greenHillZone;
+                var pause;
+                
+                function initialize(){
+                    canvas = document.getElementById("animation");
+                    ctx = canvas.getContext("2d");
+
+                    //sound
+                    ringSound=document.getElementById("ringSound");
+                    ringSoundClone = ringSound.cloneNode();
+                    lifeLost=document.getElementById('lifeLost');
+                    bombExplosion=document.getElementById('bombExplosion');
+                    bombExplosionClone = bombExplosion.cloneNode();
+                    greenHillZone=document.getElementById('greenHillZone')
+                    pause=false;
+
+                    //times
+                    timing = 0;
+                    timingTwo = 0;
+                    newItemTime = 90;
+                    levelTwoTime=0;
+                    levelThreeTime=0;
+
+                    //score
+                    score=0;
+
+                    //levels
+                    levelTwo=false;
+                    levelThree=false;
+
+                    //lives
+                    lives=3;
+                    isStart=false;
+                    isEnd=false;
+                    isWin=false;
+                    isContinue=false;
+
+                    //sonic
+                    sonicFrameX=0;
+                    sonicFrameY=0;
+                    sonicFrameW=50;
+                    sonicFrameH=67;
+                    sonicFrameCount=4;
+
+                    sonicX=sonicFrameW;
+                    sonicY=canvas.height-120;
+
+                    zoom=5;
+                    
+                    //rings
+                    rings = [];
+                    ringsFrameCount=16;
+
+                    //a.top<=b.bottom && a.right>=b.left && a.bottom>=b.top && a.left<=b.right
+
+                    //bombs
+                    bombs = [];
+                    bombFrameCount=4;
+                    bombChance=9;
+
+                    //dropSpeed of objects
+                    dropSpeed=1.25;
+
+                    //stamina
+                    stamina=150;
+                    staminaCooldown=false;
+
+                    leftKey=false;
+                    rightKey=false;
+                    upKey=false;
+                    downKey=false;
+                    shiftKey=false;
+                    spaceKey=false;
+                    aKey=false;
+                    dKey=false;
+                    wKey=false;
+
+                    sonicJumping=false;
+                    sonicJumpingFrame=0;
+
+                    //add key listeners
+                    document.addEventListener("keydown", keyDownHandler);
+                    document.addEventListener("keyup", keyUpHandler);
+
+                    //add mouse listeners
+                    canvas.addEventListener("mousemove", mouseMove, false);
+                    canvas.addEventListener("click", onClick, false);
+
+                    update()
+                }
+                function update(){
+                    if(timing==1){
+                        greenHillZone.play();
+                    }
+                    if(pause==true){
+                        greenHillZone.pause();
+                        //greenHillZone.currentTime=0;
+                    }
+                    if(isStart){
+                        timing++;
+                    }
+                    
+                        
+
+                    //speed
+                    if(score==25){
+                        dropSpeed=1.75;
+                        newItemTime=70;
+                        bombChance=8;
+                        levelTwo=true;
+                    }
+                    if(score==75){
+                        dropSpeed=2.25;
+                        newItemTime=50;
+                        bombChance=7;
+                        levelThree=true;
+                    }
+                    if(score==150){
+                        isWin=true;
+                    }
+                
+                    //sonic bounds
+                    sonicLeft = sonicX; 
+                    sonicRight = sonicX + sonicFrameW;
+                    sonicTop = sonicY;
+                    sonicBottom = sonicY + sonicFrameH;
+
+                    //sonic
+                    sonicFrameW=50;
+                    sonicFrameCount=4;
+
+                    //rings
+                    ringsFrameCount=16;
+
+                    //bombs
+                    bombsFrameCount=4;
+
+                    if(isLeft){
+                        sonicFrameY=1;
+                    }
+                    else{
+                        sonicFrameY=0;
+                    }
+
+                    //sonic jump
+                    if((upKey || spaceKey || wKey)&& !sonicJumping){
+                        sonicJumping=true;
+                        sonicJumpCount=0;
+                        sonicFrameX=0;
+                    }
+                    if(sonicJumping){
+                        sonicFrameW=303/6;
+                        sonicFrameY=2;
+                        sonicFrameCount=6;
+                        if(timing%10==0) {
+                            sonicFrameX=sonicJumpCount;
+                            switch(sonicJumpCount){
+                                case 0: sonicY-=65; break;
+                                case 1: sonicY-=40; break;
+                                case 2: sonicY-=15; break;
+                                case 3: sonicY+=65; break;
+                                case 4: sonicY+=40; break;
+                                case 5: sonicY+=15; break;
+                            }
+                            sonicJumpCount++;
+                            if(sonicJumpCount==sonicFrameCount){
+                                sonicJumping=false;
+                            }
+                        }
+                    }
+                    else if(timing%15==0) 
+                        sonicFrameX++;
+                    sonicFrameX%=sonicFrameCount;
+
+                    //sonic left right
+                    if((rightKey || dKey)&& sonicX<canvas.width-sonicFrameW){
+                        isLeft=false;
+                        sonicX+=zoom;
+                    }
+                    if((leftKey || aKey) && sonicX>0){
+                        isLeft=true;
+                        sonicX-=zoom;
+                    }
+
+                    //shift key and stamina
+                    if(shiftKey && staminaCooldown==false && stamina>0){
+                        stamina-=1;
+                        zoom=10;
+                    }
+                    else if(staminaCooldown==false && stamina<150){
+                        zoom=5;
+                        stamina+=0.5;
+                    }
+                    else{
+                        zoom=5;
+                    }
+
+                    //stamina reset
+                    if(stamina==0){
+                        staminaCooldown=true;
+                    }
+                    if(staminaCooldown){
+                        stamina+=0.5;
+                        if(stamina==150){
+                            staminaCooldown=false;
+                        }
+                    }
+
+                    //waits for levelOne to appear before gameStart
+                    if((timing>180 && isEnd==false && isWin==false)||timingTwo>180){
+                        //rings
+                        if(rings.length>0){
+                            for(var x=0; x<rings.length; x++){
+                                //ring animation
+                                if(timing%4==0)
+                                    rings[x].addOneFrameX();
+                                if(rings[x].getFrameX()%ringsFrameCount==0)
+                                    rings[x].setZeroFrameX();
+                                //movement
+                                if(rings[x].getRingY()>canvas.height-rings[x].getFrameH()-48){
+                                    rings.splice(x, 1);
+                                    lives--;
+                                    lifeLost.play();
+                                    if(lives==0){
+                                        isEnd=true;
+                                    }
+                                }
+                                else if(sonicTop<=rings[x].getRingBottom() && sonicRight>=rings[x].getRingLeft() 
+                                && sonicBottom>=rings[x].getRingTop() && sonicLeft<=rings[x].getRingRight()){
+                                    rings.splice(x, 1);
+                                    score++;
+                                    if (!ringSound.paused) {
+                                        ringSoundClone.play();
+                                    } else
+                                        ringSound.play();
+                                }
+                                else{
+                                    rings[x].moveDown(dropSpeed);
+                                    rings[x].addRingY(dropSpeed);
+                                }
+                            }
+                        }
+                        
+                        //bombs
+                        if(bombs.length>0){
+                            for(var x=0; x<bombs.length; x++){
+                                //bomb animation
+                                if(timing%6==0)
+                                    bombs[x].addOneFrameX();
+                                if(bombs[x].getFrameX()%bombFrameCount==0)
+                                    bombs[x].setZeroFrameX();
+
+                                if(bombs[x].getBombY()>canvas.height-60-60){
+                                    bombs.splice(x, 1);
+                                }
+                                else if(sonicTop<=bombs[x].getBombBottom() && sonicRight>=bombs[x].getBombLeft() 
+                                && sonicBottom>=bombs[x].getBombTop() && sonicLeft<=bombs[x].getBombRight()){
+                                    bombs.splice(x, 1);
+                                    lives--;
+                                    if (!bombExplosion.paused && !ringSound.paused) {
+                                        bombExplosionClone.play();
+                                    } else
+                                        bombExplosion.play();
+                                    if(lives==0){
+                                        isEnd=true;
+                                    }
+                                }
+                                else{
+                                    bombs[x].moveDown(dropSpeed);
+                                    bombs[x].addBombY(dropSpeed);
+                                }
+                            }
+                        }
+
+                        //creates new ring and or bomb
+                        if(timing%newItemTime==0){
+                            randomBomb = parseInt(Math.random()*10)+1;
+                            randomCol = parseInt(Math.random()*(canvas.width-48));
+                            if(randomBomb<bombChance)
+                                rings.push(new Ring(ringImg, randomCol, 0, 0, 0, 48, 48));
+                            else
+                                bombs.push(new Bomb(bombImg, randomCol, 0, 0, 0, 60, 60));
+                        }
+                    }
+                    
+                    //reset frames
+                    if(timing%3==0)
+                        sonicFrameX++;
+                    sonicFrameX%=sonicFrameCount;
+                    
+                    // dropSpeed=timing/2000;
+
+                    draw();
+                    requestAnimationFrame(update);
+                }
+                function draw(){
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if(isStart==false){
+                        ctx.drawImage(loadScreen, 0, 0);
+
+                        //start link
+                        linkX=canvas.width/2-75;
+                        linkY=canvas.height-25;
+                        linkHeight=50;
+                        inLink = false;
+
+                        ctx.beginPath();
+                            ctx.drawImage(startImg, linkX, linkY-55);
+                            linkWidth=148;
+                        ctx.closePath();
+                    }
+                    else if(isEnd==false && isWin==false && isStart){
+                        ctx.drawImage(background, 0, 0);
+
+                        //deleting link
+                        linkX=null;
+                        linkY=null;
+                        linkHeight=null;
+
+                        //levels
+                        if(timing<=180){
+                            ctx.beginPath();
+                                ctx.font="75px Comic Sans MS";
+                                ctx.fillStyle="gold";
+                                ctx.fillText("Level 1", canvas.width/2-125, canvas.height/2+25)
+                            ctx.closePath();
+                        }
+
+                        if(levelTwo && levelTwoTime<=180){
+                            ctx.beginPath();
+                                ctx.font="75px Comic Sans MS";
+                                ctx.fillStyle="gold";
+                                ctx.fillText("Level 2", canvas.width/2-125, canvas.height/2+25)
+                            ctx.closePath();
+                            levelTwoTime++;
+                        }
+
+                        if(levelThree && levelThreeTime<=180){
+                            ctx.beginPath();
+                                ctx.font="75px Comic Sans MS";
+                                ctx.fillStyle="gold";
+                                ctx.fillText("Level 3", canvas.width/2-125, canvas.height/2+25)
+                            ctx.closePath();
+                            levelThreeTime++;
+                        }
+
+                        //sonic
+                        ctx.beginPath()
+                            ctx.drawImage(sonic, 
+                            sonicFrameX*sonicFrameW, 
+                            sonicFrameY*sonicFrameH, 
+                            sonicFrameW, 
+                            sonicFrameH, 
+                            sonicX, 
+                            sonicY, 
+                            sonicFrameW, 
+                            sonicFrameH);
+                        ctx.closePath()
+
+                        //rings
+                        rings.forEach(function(ring){
+                            ring.draw(ctx);
+                        });
+
+                        //bombs
+                        bombs.forEach(function(bomb){
+                            bomb.draw(ctx);
+                        });
+
+
+                        //score
+                        ctx.beginPath();
+                            ctx.font="20px Comic Sans MS";
+                            ctx.fillStyle="white";
+                            ctx.fillText("Score: ", 25, canvas.height-10)
+                        ctx.closePath();
+                        ctx.beginPath();
+                            ctx.font="20px Comic Sans MS";
+                            ctx.fillStyle="white";
+                            ctx.fillText(score, 95, canvas.height-8)
+                        ctx.closePath();
+
+                        
+                        //lives
+                        ctx.beginPath();
+                            ctx.font="20px Comic Sans MS";
+                            ctx.fillStyle="red";
+                            ctx.fillText("Lives: ", canvas.width-160, canvas.height-10)
+                        ctx.closePath();
+
+                        //hearts
+                        var placement = canvas.width-100
+                        for(var x=0; x<lives; x++){
+                            ctx.beginPath();
+                                ctx.drawImage(heartImg, placement, canvas.height-27.5);
+                            ctx.closePath();
+                            placement+=30;
+                        }
+
+                        //stamina
+                        ctx.beginPath();
+                            ctx.font="20px Comic Sans MS";
+                            ctx.fillStyle="gold";
+                            ctx.fillText("Stamina: ", canvas.width/2-135, canvas.height-10)
+                        ctx.closePath();
+
+                        ctx.beginPath();
+                            ctx.rect(canvas.width/2-45, canvas.height-25, 153, 20);
+                            ctx.strokeStyle="white";
+                            ctx.lineWidth=3;
+                            ctx.stroke();
+                        ctx.closePath();
+
+                        if(staminaCooldown==false){
+                            ctx.beginPath();
+                                ctx.rect(canvas.width/2-45+1.5, canvas.height-23, stamina, 17);
+                                ctx.fillStyle="blue";
+                                ctx.fill();
+                            ctx.closePath();
+                        }
+                        else{
+                            ctx.beginPath();
+                                ctx.rect(canvas.width/2-45+1.5, canvas.height-23, stamina, 17);
+                                ctx.fillStyle="lime";
+                                ctx.fill();
+                            ctx.closePath();
+                        }
+                        
+                    }
+                    else if(isEnd){
+                        pause=!pause;
+                        ctx.drawImage(gameOver, 0, 0);
+
+                        //score
+                        ctx.beginPath();
+                            ctx.font="50px Comic Sans MS";
+                            ctx.fillStyle="white";
+                            ctx.fillText("Score: ", canvas.width/2-245, canvas.height-220);
+                        ctx.closePath();
+                        ctx.beginPath();
+                            ctx.font="50px Comic Sans MS";
+                            ctx.fillStyle="white";
+                            ctx.fillText(score, canvas.width/2-80, canvas.height-220);
+                        ctx.closePath();
+
+                        //play again link
+                        linkX=canvas.width/2+30;
+                        linkY=canvas.height-220;
+                        linkHeight=50;
+
+                        ctx.beginPath();
+                            ctx.font="50px Comic Sans MS";
+                            ctx.fillStyle="white";
+                            ctx.fillText("Play Again", linkX, linkY);
+                            linkWidth=250;
+                        ctx.closePath();
+                    }
+                    else if(isWin){
+                        pause=!pause;
+                        ctx.drawImage(gameWin, 0, 0);
+
+                        //play again link
+                        linkX=canvas.width/2+10;
+                        linkY=canvas.height-70;
+                        linkHeight=50;
+
+                        ctx.beginPath();
+                            ctx.font="50px Comic Sans MS";
+                            ctx.fillStyle="white";
+                            ctx.fillText("Play Again", linkX, linkY);
+                            linkWidth=250;
+                        ctx.closePath();
+                    }
+                    //test
+                   
+                }
+                 //check if the mouse is over the link and change cursor style
+                function mouseMove (ev) {
+                    var x, y;
+                
+                // Get the mouse position relative to the canvas element.
+                    if (ev.layerX || ev.layerY) {
+                        x = ev.layerX;
+                        y = ev.layerY;
+                    }
+                    x-=canvas.offsetLeft;
+                    y-=canvas.offsetTop;
+                    
+                //is the mouse over the link?
+                    if(x>=linkX && x <= (linkX + linkWidth) &&
+                        y<=linkY && y>= (linkY-linkHeight)){
+                        document.body.style.cursor = "pointer";
+                        inLink=true;  
+                        if(isStart==false){
+                            inStartLink=true;
+                            /*
+                            ctx.beginPath();
+                                ctx.fillStyle="white";
+                                //ctx.globalAlpha = 0.5;
+                                ctx.rect(10, 10, 100, 100);
+                                ctx.fill();
+                            ctx.closePath()
+                            */
+                        }
+                    }
+                    else{
+                        document.body.style.cursor = "";
+                        //ctx.globalAlpha = 1;
+                        inLink=false;
+                        if(isStart==false){
+                            inStartLink=false;
+                        }
+                        
+                    }
+                }
+                //if the link has been clicked, go to link
+                function onClick(e) {
+                    if(inLink){
+                        location.reload();
+                    }
+                    else if(inStartLink){
+                        isStart=true;
+                    }
+                    
+                }
+            </script>
+        </head>
+        <body onload='initialize()'>
+            <canvas id="animation" width="640px" height="448px"></canvas>
+            <audio src='sonicRing.mp3' id='ringSound' preload='auto' controls='none' style='display:none'></audio>
+            <audio src='lifeLost.mp3' id='lifeLost' preload='auto' controls='none' style='display:none'></audio>
+            <audio src='bombExplosion.wav' id='bombExplosion' preload='auto' controls='none' style='display:none'></audio>
+            <audio src='greenHillZone.mp3' type='audio/mpeg' id='greenHillZone' preload='auto' controls='none' style='display:none' loop='true'></audio>
+            <h1>Info</h1>
+            </br>
+            <div><span>Objective:</span> Catch rings to score points and avoid bombs</div>
+            <div><span>Lives:</span> You have <span style="color:red">3</span> lives; if a ring hits the grass, or you hit a bomb, you lose a life</div>
+            <div><span>Levels:</span> Level 2 is achieved by scoring <span style="color:red">25</span>; Level 3 is achieved by scoring <span style="color:red">75</span>;</br> Every level, objects spawn and drop faster, and bombs spawn more frequently; </br>Score <span style="color:red">150</span> points to win!</div>
+            <div><span>Stamina:</span> If the <span style="color:red">shift</span> key is pressed, the stamina bar goes down;</br>If stamina is not used, it will increase over time;</br>If the stamina bar is fully depleted, it will recharge and be unusable for a short period</div>
+            <div><span>Controls:</span> Use the <span style="color:red">arrow keys, w a d, or the space bar</span> to move left, right, or jump</div>
+        </body>
+    </html>
